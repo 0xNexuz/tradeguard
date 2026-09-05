@@ -1,12 +1,14 @@
 'use client';
 import {useState,useEffect,useRef} from 'react';
-import {ArrowRight,Check,CircleAlert,Gauge,ShieldCheck,RefreshCw,Download} from 'lucide-react';
+import {ArrowRight,Check,CircleAlert,Gauge,ShieldCheck,RefreshCw,Download,Copy,Bot} from 'lucide-react';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
 import {review, type Book,type Plan,type Review} from '@/lib/risk';
 
 const money=(n:number)=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 const initial:Plan={amount:1500,budget:1000,portfolio:5000,holding:500,exposure:25,slippage:0.5};
+type EvidenceSource='Binance public REST'|'Binance Agent OS MCP';
+type AgentSnapshot={bid:number;asks:[number,number][];updateId:number};
 export default function Home(){
  const [plan,setPlan]=useState<Plan>(initial);
  const [book,setBook]=useState<Book|null>(null);
@@ -14,6 +16,9 @@ export default function Home(){
  const [error,setError]=useState('');
  const [feedError,setFeedError]=useState('');
  const [busy,setBusy]=useState(false);
+ const [source,setSource]=useState<EvidenceSource>('Binance public REST');
+ const [copied,setCopied]=useState(false);
+ const [agentToolReady,setAgentToolReady]=useState(false);
  const [now,setNow]=useState(0);
  const generation=useRef(0);
  const planRef=useRef(plan);
@@ -37,26 +42,42 @@ export default function Home(){
    const value=await response.json() as Book & Review & {error?:string};
    if(!response.ok) throw new Error(value.error);
    if(id!==generation.current)return;
-   setResult(value);setBook(value.book);setFeedError('');setNow(Date.now());return value;
+   setResult(value);setBook(value.book);setSource('Binance public REST');setFeedError('');setNow(Date.now());return value;
   }catch(e){if(id===generation.current)setError(e instanceof Error?e.message:'Check failed.');}
   finally{if(id===generation.current)setBusy(false);}
  }
+ async function checkAgentSnapshot(snapshot:AgentSnapshot){
+  const id=++generation.current;setBusy(true);setError('');setResult(null);
+  try{
+   if(!snapshot||typeof snapshot.bid!=='number'||!Number.isFinite(snapshot.bid)||!Number.isFinite(snapshot.updateId)||!Array.isArray(snapshot.asks)||snapshot.asks.length<1||snapshot.asks.length>100)throw new Error('Agent OS returned an invalid order book.');
+   const response=await fetch('/api/review-agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:'binance-agent-os-mcp',plan:planRef.current,book:snapshot}),signal:AbortSignal.timeout(15000)});
+   const value=await response.json() as Review&{error?:string};if(!response.ok)throw new Error(value.error);
+   if(id!==generation.current)return;setResult(value);setBook(value.book);setSource('Binance Agent OS MCP');setFeedError('');setNow(Date.now());return value;
+  }catch(e){if(id===generation.current)setError(e instanceof Error?e.message:'Agent OS check failed.');}
+  finally{if(id===generation.current)setBusy(false);}
+ }
  async function revise(){if(!result||result.candidate<10)return;const next={...planRef.current,amount:result.candidate};planRef.current=next;setPlan(next);await check(next);}
- function download(){if(!result)return;const data={...result,source:'Binance Spot public REST API',symbol:'BTCUSDT',accountInputs:'Manually entered; not authenticated balances',execution:'No order placed',limitations:'Snapshot estimate, excludes fees, latency, and exchange order filters.'};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='tradeguard-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ function download(){if(!result)return;const data={...result,source,symbol:'BTCUSDT',accountInputs:'Manually entered; not authenticated balances',execution:'No order placed',limitations:'Snapshot estimate, excludes fees, latency, and exchange order filters.'};const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='tradeguard-review.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ async function copyAgentPrompt(){await navigator.clipboard.writeText("Use Binance Agent OS to fetch the BTCUSDT Spot order book with up to 100 levels. Then call TradeGuard's review_agent_os_snapshot tool with bid, asks, and lastUpdateId as updateId. Do not place a trade. Explain any rejection and recheck a revised amount only if I approve it.");setCopied(true);setTimeout(()=>setCopied(false),1600);}
  useEffect(()=>{
   const context=(document as Document & {modelContext?:{registerTool:(tool:unknown,options:{signal:AbortSignal})=>unknown}}).modelContext;
   if(!context?.registerTool)return;const lifecycle=new AbortController();
-  try{Promise.resolve(context.registerTool({name:'check_trading_plan',description:'Check the current visible BTC buy plan using a fresh Binance order book. Updates the review; never submits a trade.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:async(input:unknown)=>{if(!input||typeof input!=='object'||Object.keys(input).length)throw new Error('No arguments accepted. Configure fields first.');const output=await check();return output?{passed:output.passed,reasons:output.reasons,candidate:output.candidate,updateId:output.book.updateId,execution:'No order placed'}:{error:'Check failed or superseded. See the visible error.'};}},{signal:lifecycle.signal})).catch(()=>{});
+  const register=(tool:unknown)=>Promise.resolve(context.registerTool(tool,{signal:lifecycle.signal})).catch(()=>{});
+  try{
+   void register({name:'check_trading_plan',title:'Check trading plan',description:'Check the visible BTC buy plan using TradeGuard’s server-fetched Binance order book. Never submits a trade.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:async(input:unknown)=>{if(!input||typeof input!=='object'||Object.keys(input).length)throw new Error('No arguments accepted. Configure fields first.');const output=await check();return output?{passed:output.passed,reasons:output.reasons,candidate:output.candidate,updateId:output.book.updateId,source:'Binance public REST',execution:'No order placed'}:{error:'Check failed or superseded. See the visible error.'};}});
+   void register({name:'review_agent_os_snapshot',title:'Review Agent OS snapshot',description:'Apply TradeGuard’s visible plan and guardrails to a fresh BTCUSDT Spot order book returned by Binance Agent OS. Pass numeric bid, asks as [price, quantity] pairs, and lastUpdateId as updateId. Updates the visible review and never places a trade.',inputSchema:{type:'object',properties:{bid:{type:'number',exclusiveMinimum:0},asks:{type:'array',minItems:1,maxItems:100,items:{type:'array',prefixItems:[{type:'number',exclusiveMinimum:0},{type:'number',exclusiveMinimum:0}],minItems:2,maxItems:2}},updateId:{type:'number'}},required:['bid','asks','updateId'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:async(input:unknown)=>{const output=await checkAgentSnapshot(input as AgentSnapshot);return output?{passed:output.passed,reasons:output.reasons,candidate:output.candidate,priceImpact:output.impact,updateId:output.book.updateId,source:'Binance Agent OS MCP',execution:'No order placed'}:{error:'Agent OS check failed or was superseded. See the visible error.'};}});
+   setAgentToolReady(true);
   }catch{}return()=>lifecycle.abort();
  },[]);
  const phase=busy?'checking':result?(result.passed&&validResult?'verified':'revised'):'ready';
  const headline=busy?'Reading the order book…':error?'Check unavailable':result?(validResult?(result.passed?'Within the checked limits.':'Your plan needs a revision.'):'This review has expired.'):'Ready when you are.';
  return <main className="app-shell">
  <div className="cosmic-backdrop" aria-hidden="true"/>
- <header className="topbar"><a className="brand" href="#workspace" aria-label="TradeGuard home"><img className="brand-logo" src="/tradeguard-mark.svg" alt=""/><span>TRADEGUARD</span></a><nav className="nav-links" aria-label="Main navigation"><a className="active" href="#workspace">Workspace</a><a href="#guardrails">Guardrails</a><a href="#activity">Evidence</a></nav><div className="mode-pill"><span/>{fresh?'Live Binance feed':feedError?'Feed unavailable':'Refreshing feed'}</div></header>
+ <header className="topbar"><a className="brand" href="#workspace" aria-label="TradeGuard home"><img className="brand-logo" src="/tradeguard-mark.svg" alt=""/><span>TRADEGUARD</span></a><nav className="nav-links" aria-label="Main navigation"><a className="active" href="#workspace">Workspace</a><a href="#guardrails">Guardrails</a><a href="#activity">Evidence</a></nav><div className="mode-pill"><span/>{source==='Binance Agent OS MCP'?'Agent OS evidence':agentToolReady?'Agent OS bridge ready':fresh?'Live Binance feed':feedError?'Feed unavailable':'Refreshing feed'}</div></header>
  <section className="intro"><div className="intro-art" aria-hidden="true"><img src="/human-machine.png" alt=""/><span className="connection-glow"/></div><div className="intro-copy"><p className="eyebrow">TRADEGUARD / PRE-TRADE CHECKS</p><h1>Your intent.<br/><em>Under control.</em></h1><p>Check a trading plan before it becomes a trade.</p></div><div className="intro-note"><ShieldCheck size={18}/><span>Live market evidence.<br/>Your limits, enforced.</span></div></section>
  <section className="workspace" id="workspace" aria-label="Live trading plan checks">
- <div className="plan-panel glass-panel"><div className="panel-heading"><div><p className="panel-index">01 / PLAN</p><h2>Check a BTC buy</h2></div><span className="data-pill">Read-only market access</span></div>
+ <div className="plan-panel glass-panel"><div className="panel-heading"><div><p className="panel-index">01 / PLAN</p><h2>Check a BTC buy</h2></div><span className="data-pill">Agent OS bridge active</span></div>
+ <div className="agent-os-bridge"><div className="agent-os-icon"><Bot size={19}/></div><div><strong>{source==='Binance Agent OS MCP'?'Agent OS evidence received':agentToolReady?'Agent OS bridge is ready':'Agent OS workflow available'}</strong><p>Let the agent fetch the order book through Binance MCP, then hand it to TradeGuard for a constrained, visible review.</p></div><Button variant="outline" onClick={()=>void copyAgentPrompt()}><Copy size={15}/>{copied?'Copied':'Copy agent prompt'}</Button></div>
  <div className="market-tape" aria-live="polite"><div><span>Best ask / USDT</span><strong>{book?money(book.asks[0][0]):'—'}</strong></div><div><span>Best bid / USDT</span><strong>{book?money(book.bid):'—'}</strong></div><div><span>Spread</span><strong>{book?((book.asks[0][0]/book.bid-1)*100).toFixed(4)+'%':'—'}</strong></div></div>
  <p className="feed-note">{book?'Snapshot received '+new Date(book.receivedAt).toLocaleTimeString()+' · '+Math.max(0,Math.floor((now-book.receivedAt)/1000))+'s ago':'Connecting to Binance Spot…'} <button onClick={()=>void refresh()} aria-label="Refresh market data"><RefreshCw size={14}/></button></p>
  {feedError&&<p className="error-note" role="alert">{feedError}</p>}
@@ -72,8 +93,8 @@ export default function Home(){
  <div className={'revision-card '+(result.passed?'verified-card':'')}><span>{result.passed?'Snapshot-based assessment':'Proposed maximum'}</span><strong>{result.passed?money(result.quantity)+' BTC estimated':money(result.candidate)+' USDT'}</strong>{!result.passed&&result.candidate>=10&&<Button className="revision-button" disabled={busy} onClick={()=>void revise()}>Recheck revised amount <ArrowRight size={16}/></Button>}{!validResult&&<Button className="revision-button" onClick={()=>void check()} disabled={busy}>Refresh this review <RefreshCw size={16}/></Button>}<p className="scope-note">No trade executed. Market conditions can change after this snapshot.</p></div></>:<p className="empty-review">Each check fetches the latest 100 sell levels, estimates the fill, and compares your plan with the limits you enter.</p>}
  </div></aside>
  <div className="process-strip" id="activity"><div className="process-step active"><span>01</span><div><b>CHECK</b><small>Fresh Binance snapshot</small></div></div><div className="process-line"/><div className={'process-step '+(result&&!result.passed?'active':'')}><span>02</span><div><b>REPLAN</b><small>Apply your constraints</small></div></div><div className="process-line"/><div className={'process-step '+(result?.passed&&validResult?'active':'')}><span>03</span><div><b>VERIFY</b><small>Recheck on fresh data</small></div></div></div>
- <div className="evidence-bar"><div><strong>Inspect the evidence</strong><p>{result?'Binance update ID '+result.book.updateId+' · '+new Date(result.checkedAt).toLocaleString():'Run a check to export the inputs, order book, calculations and outcome.'}</p></div><Button onClick={download} disabled={!result} variant="outline"><Download size={16}/> Export review</Button></div>
- </section><footer><span>TradeGuard / Binance public data</span><span>Manual account inputs · No AI model or Agent OS session connected · No trades</span></footer></main>;
+ <div className="evidence-bar"><div><strong>Inspect the evidence</strong><p>{result?source+' · Binance update ID '+result.book.updateId+' · '+new Date(result.checkedAt).toLocaleString():'Run a check to export the inputs, order book, calculations and outcome.'}</p></div><Button onClick={download} disabled={!result} variant="outline"><Download size={16}/> Export review</Button></div>
+ </section><footer><span>TradeGuard / Binance Agent OS control layer</span><span>Agent OS market tools · Manual portfolio inputs · Human approval · No automatic trades</span></footer></main>;
 }
 
 

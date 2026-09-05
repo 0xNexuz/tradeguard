@@ -16,6 +16,5 @@ assert.throws(()=>validatePlan({...base,amount:NaN}));
 assert.equal(review({...base,amount:5000,budget:10000,portfolio:100000},book,now).passed,false);
 const revised=review({...base,amount:600},book,now).candidate;
 assert.equal(review({...base,amount:revised},book,now).passed,true);
-console.log('11 risk checks passed: budgets, exposure, depth, price impact, invalid and stale data, revision.');
-
 assert.throws(()=>validatePlan({amount:100}));
+console.log('12 risk checks passed: budgets, exposure, depth, price impact, missing values, invalid and stale data, revision.');
