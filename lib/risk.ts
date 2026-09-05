@@ -1,0 +1,33 @@
+export type Book = { bid: number; asks: [number, number][]; receivedAt: number; updateId: number };
+export type Plan = { amount: number; budget: number; portfolio: number; holding: number; exposure: number; slippage: number };
+export type Review = { passed: boolean; reasons: string[]; candidate: number; quantity: number; average: number; impact: number; exposureAfter: number; checkedAt: number; book: Book; plan: Plan };
+export function validatePlan(p: Plan) {
+  if (!p || (['amount','budget','portfolio','holding','exposure','slippage'] as const).some(key => typeof p[key] !== 'number' || !Number.isFinite(p[key]))) throw new Error('All limits must be finite numbers.');
+  if (p.amount < 10 || p.amount > 1000000 || p.budget < 0 || p.portfolio <= 0 || p.holding < 0 || p.holding > p.portfolio || p.exposure <= 0 || p.exposure > 100 || p.slippage <= 0 || p.slippage > 5) throw new Error('Enter an order of 10–1,000,000 USDT and valid portfolio limits.');
+}
+export function review(p: Plan, book: Book, now = Date.now()): Review {
+  validatePlan(p);
+  if (!Number.isFinite(book.receivedAt) || now - book.receivedAt > 15000 || book.receivedAt > now + 1000 || !Number.isFinite(book.bid) || book.bid <= 0 || !book.asks.length || book.asks.some(([price,qty],i) => !Number.isFinite(price) || !Number.isFinite(qty) || price <= 0 || qty <= 0 || (i>0 && price < book.asks[i-1][0])) || book.asks[0][0] < book.bid) throw new Error('Order book is stale or invalid. Refresh before checking.');
+  const reasons: string[] = [];
+  const exposureRoom = Math.max(0, p.portfolio * p.exposure / 100 - p.holding);
+  if (p.amount > p.budget) reasons.push('Order exceeds your available cash budget.');
+  if (p.amount > exposureRoom) reasons.push('Order exceeds your portfolio exposure limit.');
+  const best = book.asks[0][0];
+  const maxPrice = best * (1 + p.slippage/100);
+  const depthRoom = book.asks.filter(([price])=>price <= maxPrice).reduce((sum,[price,qty])=>sum+price*qty,0);
+  let remaining=p.amount, quantity=0;
+  for(const [price,qty] of book.asks) {
+    const spend=Math.min(remaining,price*qty);
+    quantity+=spend/price; remaining-=spend;
+    if(remaining<0.000001) break;
+  }
+  const average=quantity>0?(p.amount-remaining)/quantity:0;
+  const impact=average>0?(average/best-1)*100:0;
+  if (remaining>0.000001) reasons.push('Insufficient visible liquidity in the 100-level snapshot.');
+  if (impact > p.slippage) reasons.push('Estimated order-book price impact exceeds your limit.');
+  const candidate=Math.floor(Math.min(p.amount,p.budget,exposureRoom,depthRoom)*100)/100;
+  if(candidate<10) reasons.push('No revised order above this app’s 10 USDT minimum fits your limits.');
+  return { passed:reasons.length===0,reasons,candidate,quantity,average,impact,exposureAfter:(p.holding+p.amount)/p.portfolio*100,checkedAt:now,book,plan:{...p} };
+}
+
+

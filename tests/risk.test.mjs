@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import {review,validatePlan} from '../lib/risk.ts';
+const now=Date.now();
+const book={bid:99,asks:[[100,1],[101,10]],receivedAt:now,updateId:1};
+const base={amount:100,budget:1000,portfolio:1000,holding:0,exposure:50,slippage:0.5};
+assert.equal(review(base,book,now).passed,true);
+assert.equal(review({...base,amount:600},book,now).passed,false);
+assert.equal(review({...base,amount:600},book,now).candidate,100);
+assert.equal(review({...base,budget:50},book,now).candidate,50);
+assert.equal(review({...base,holding:480},book,now).candidate,20);
+assert.equal(review({...base,holding:500},book,now).candidate,0);
+assert.throws(()=>review(base,{...book,receivedAt:now-16000},now));
+assert.throws(()=>review(base,{...book,asks:[[NaN,1]]},now));
+assert.throws(()=>validatePlan({...base,amount:-1}));
+assert.throws(()=>validatePlan({...base,amount:NaN}));
+assert.equal(review({...base,amount:5000,budget:10000,portfolio:100000},book,now).passed,false);
+const revised=review({...base,amount:600},book,now).candidate;
+assert.equal(review({...base,amount:revised},book,now).passed,true);
+console.log('11 risk checks passed: budgets, exposure, depth, price impact, invalid and stale data, revision.');
+
+assert.throws(()=>validatePlan({amount:100}));
