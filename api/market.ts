@@ -1,4 +1,4 @@
-import { getBook } from '../lib/market';
+import { getBook } from '../lib/market.js';
 
 type Reply = {
   status(code: number): Reply;

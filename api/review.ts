@@ -1,5 +1,5 @@
-import { getBook } from '../lib/market';
-import { review, validatePlan, type Plan } from '../lib/risk';
+import { getBook } from '../lib/market.js';
+import { review, validatePlan, type Plan } from '../lib/risk.js';
 
 type Reply = {
   status(code: number): Reply;

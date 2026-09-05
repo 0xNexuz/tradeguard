@@ -1,4 +1,4 @@
-import { review, validatePlan, type Book, type Plan } from '../lib/risk';
+import { review, validatePlan, type Book, type Plan } from '../lib/risk.js';
 
 type Reply = {
   status(code: number): Reply;

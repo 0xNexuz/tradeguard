@@ -4,7 +4,12 @@
   "outputDirectory": "dist/client",
   "functions": {
     "api/*.ts": {
-      "maxDuration": 10
+      "maxDuration": 10,
+      "includeFiles": "{lib/**,dist/server/**}"
     }
-  }
+  },
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/.*", "dest": "/api/site" }
+  ]
 }
