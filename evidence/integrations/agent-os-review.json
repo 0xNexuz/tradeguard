@@ -13,19 +13,18 @@
     "amount": 1500,
     "budget": 1000,
     "portfolio": 5000,
-    "currentHolding": 500,
-    "maxExposurePct": 25,
-    "maxSlippagePct": 0.5
+    "holding": 500,
+    "exposure": 25,
+    "slippage": 0.5
   },
   "result": {
     "passed": false,
     "candidate": 750,
     "reasons": [
-      "Amount exceeds the 1000.00 USDT budget.",
-      "Post-trade exposure would exceed the 25% portfolio limit."
+      "Order exceeds your available cash budget.",
+      "Order exceeds your portfolio exposure limit."
     ],
     "execution": "No order placed"
   },
   "provenanceLimitation": "The public endpoint trusts caller-provided source text and stamps server receipt time; this record proves the observed run, not unforgeable provenance."
 }
-
