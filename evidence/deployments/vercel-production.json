@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-09-06",
+  "provider": "Vercel",
+  "project": "tradeguard",
+  "deploymentId": "dpl_5HPvF3NA3uZf2F1BYHKwRWzVMFjy",
+  "deploymentUrl": "https://tradeguard-l675buzrl-xreyys-projects.vercel.app",
+  "publicAlias": "https://tradeguard-os.vercel.app",
+  "homeStatus": 200,
+  "loginProtection": false,
+  "productCommit": "d424f65dfdc0004919c707f6a7788addc718b2a2"
+}
+

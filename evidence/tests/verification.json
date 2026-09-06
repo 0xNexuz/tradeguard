@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "observedOn": "2026-09-06",
+  "productCommit": "d424f65dfdc0004919c707f6a7788addc718b2a2",
+  "checks": {
+    "riskAssertions": { "command": "node --experimental-strip-types tests/risk.test.mjs", "passed": true, "count": 12 },
+    "typecheck": { "command": "npx tsc --noEmit", "passed": true },
+    "productionBuild": { "command": "npm run build", "passed": true },
+    "localVercelBuild": { "passed": false, "reason": "The local Vercel CLI environment could not spawn cmd.exe; the remote Vercel production build succeeded." }
+  },
+  "dependencyAudit": {
+    "info": 0,
+    "low": 1,
+    "moderate": 2,
+    "high": 8,
+    "critical": 0,
+    "status": "requires remediation"
+  }
+}
+

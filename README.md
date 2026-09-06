@@ -1,5 +1,9 @@
 # TradeGuard
 A BTCUSDT pre-trade risk checker with a Binance Agent OS bridge. Codex can fetch an order book through the Binance MCP integration, pass the snapshot into TradeGuard, and receive a deterministic approval or constrained revision. No order is submitted.
+
+**Live demo:** https://tradeguard-os.vercel.app
+
+**Readiness audit:** [`docs/build-harness/00_README.md`](docs/build-harness/00_README.md)
 ## Run
 npm install
 npm run dev
