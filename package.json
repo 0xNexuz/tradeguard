@@ -11,7 +11,7 @@
     "start": "wrangler dev --config dist/server/wrangler.json",
     "test": "node --experimental-strip-types tests/risk.test.mjs && tsx tests/review-agent.test.mjs",
     "typecheck": "tsc --noEmit",
-    "verify": "npm test && npm run typecheck && npm run build",
+    "verify": "npm test && npm run build && npm run typecheck",
     "lint": "oxlint",
     "format": "oxfmt"
   },
