@@ -1,9 +1,21 @@
 export type Book = { bid: number; asks: [number, number][]; receivedAt: number; updateId: number };
+export type AgentBook = Pick<Book, 'bid' | 'asks' | 'updateId'>;
 export type Plan = { amount: number; budget: number; portfolio: number; holding: number; exposure: number; slippage: number };
 export type Review = { passed: boolean; reasons: string[]; candidate: number; quantity: number; average: number; impact: number; exposureAfter: number; checkedAt: number; book: Book; plan: Plan };
 export function validatePlan(p: Plan) {
   if (!p || (['amount','budget','portfolio','holding','exposure','slippage'] as const).some(key => typeof p[key] !== 'number' || !Number.isFinite(p[key]))) throw new Error('All limits must be finite numbers.');
   if (p.amount < 10 || p.amount > 1000000 || p.budget < 0 || p.portfolio <= 0 || p.holding < 0 || p.holding > p.portfolio || p.exposure <= 0 || p.exposure > 100 || p.slippage <= 0 || p.slippage > 5) throw new Error('Enter an order of 10–1,000,000 USDT and valid portfolio limits.');
+}
+export function verifyAgentMarket(agent: AgentBook, reference: Book) {
+  if (!Number.isSafeInteger(agent.updateId) || agent.updateId <= 0 || !Number.isSafeInteger(reference.updateId) || reference.updateId <= 0) throw new Error('Invalid market update ID.');
+  if (!Array.isArray(agent.asks) || agent.asks.length < 1 || agent.asks.length > 100) throw new Error('Invalid Agent OS depth.');
+  const agentAsk = agent.asks[0]?.[0];
+  const referenceAsk = reference.asks[0]?.[0];
+  if (![agent.bid, agentAsk, reference.bid, referenceAsk].every(value => typeof value === 'number' && Number.isFinite(value) && value > 0)) throw new Error('Invalid market top of book.');
+  const bidDrift = Math.abs(agent.bid / reference.bid - 1) * 100;
+  const askDrift = Math.abs(agentAsk / referenceAsk - 1) * 100;
+  if (bidDrift > 0.5 || askDrift > 0.5) throw new Error('Agent snapshot does not match the current Binance market.');
+  return { bidDrift, askDrift };
 }
 export function review(p: Plan, book: Book, now = Date.now()): Review {
   validatePlan(p);

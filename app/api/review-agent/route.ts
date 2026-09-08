@@ -1,4 +1,5 @@
-import { review, validatePlan, type Book, type Plan } from '@/lib/risk';
+import { getBook } from '@/lib/market';
+import { review, validatePlan, verifyAgentMarket, type Book, type Plan } from '@/lib/risk';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,10 +16,14 @@ export async function POST(request: Request) {
     const payload = JSON.parse(raw) as AgentReviewRequest;
     if (payload.source !== 'binance-agent-os-mcp') throw new Error('Invalid source.');
     validatePlan(payload.plan);
-    const book: Book = { ...payload.book, receivedAt: Date.now() };
+    const receivedAt = Date.now();
+    const agentBook: Book = { ...payload.book, receivedAt };
+    review(payload.plan, agentBook, receivedAt);
+    const book = await getBook();
+    const comparison = verifyAgentMarket(agentBook, book);
     const result = review(payload.plan, book);
     return Response.json(
-      { ...result, evidenceSource: 'Binance Agent OS MCP', execution: 'No order placed' },
+      { ...result, evidenceSource: 'Agent OS request · Binance verified', agentEvidence: { updateId: agentBook.updateId, ...comparison }, execution: 'No order placed' },
       { headers: { 'Cache-Control': 'no-store' } },
     );
   } catch {

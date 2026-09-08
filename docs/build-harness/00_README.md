@@ -2,6 +2,8 @@
 
 This directory is the readiness source of truth for the Binance Agent OS Mini Hackathon build.
 
+**Latest status:** See [September 8 release update](13_release-update.md). The findings below describe the September 6 audit and are retained as history.
+
 ## Current Readiness
 
 - Overall status: **PARTIAL**

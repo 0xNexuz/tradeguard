@@ -4,6 +4,23 @@ A BTCUSDT pre-trade risk checker with a Binance Agent OS bridge. Codex can fetch
 **Live demo:** https://tradeguard-os.vercel.app
 
 **Readiness audit:** [`docs/build-harness/00_README.md`](docs/build-harness/00_README.md)
+
+## September 8 release
+
+Agent requests are validated and compared with a fresh Binance top of book (maximum 0.5% deviation). Risk calculations use the fresh server-fetched book, so caller-supplied depth cannot influence an approval. The receipt preserves the submitted update ID separately. This verifies the market reference, not the identity of the agent client.
+
+Patched React, vinext, Vite and Cloudflare dependencies. The dependency installation audit reports zero vulnerabilities. Risk assertions, TypeScript checking and the production build pass. GitHub Actions runs these checks on pushes and pull requests.
+
+## Demo recording — 75 seconds
+
+1. 0–8s: Show the live app and logo. Say: “TradeGuard checks an agent’s trading plan before execution.”
+2. 8–20s: Show 1,500 USDT amount, 1,000 budget, 5,000 portfolio, 500 current BTC holding, 25% exposure cap.
+3. 20–38s: Show Binance Agent OS fetching BTCUSDT depth, then invoking review_agent_os_snapshot in a supported browser.
+4. 38–50s: Hold on the rejection reasons and 750 USDT candidate.
+5. 50–63s: Click Recheck revised amount. Show the fresh result; only describe a pass if the live result passes.
+6. 63–75s: Export the receipt. End with the live URL and “No order placed.”
+
+Use 1080p landscape, readable captions, quiet music, and a continuous take between the actual tool call and its result. Browser WebMCP invocation still needs recording; do not present an HTTP test as browser proof. Portfolio inputs are manual.
 ## Run
 npm install
 npm run dev

@@ -7,7 +7,7 @@ import {review, type Book,type Plan,type Review} from '@/lib/risk';
 
 const money=(n:number)=>n.toLocaleString('en-US',{maximumFractionDigits:2});
 const initial:Plan={amount:1500,budget:1000,portfolio:5000,holding:500,exposure:25,slippage:0.5};
-type EvidenceSource='Binance public REST'|'Binance Agent OS MCP';
+type EvidenceSource='Binance public REST'|'Agent OS request · Binance verified';
 type AgentSnapshot={bid:number;asks:[number,number][];updateId:number};
 export default function Home(){
  const [plan,setPlan]=useState<Plan>(initial);
@@ -51,8 +51,8 @@ export default function Home(){
   try{
    if(!snapshot||typeof snapshot.bid!=='number'||!Number.isFinite(snapshot.bid)||!Number.isFinite(snapshot.updateId)||!Array.isArray(snapshot.asks)||snapshot.asks.length<1||snapshot.asks.length>100)throw new Error('Agent OS returned an invalid order book.');
    const response=await fetch('/api/review-agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source:'binance-agent-os-mcp',plan:planRef.current,book:snapshot}),signal:AbortSignal.timeout(15000)});
-   const value=await response.json() as Review&{error?:string};if(!response.ok)throw new Error(value.error);
-   if(id!==generation.current)return;setResult(value);setBook(value.book);setSource('Binance Agent OS MCP');setFeedError('');setNow(Date.now());return value;
+   const value=await response.json() as Review&{error?:string;evidenceSource?:EvidenceSource};if(!response.ok)throw new Error(value.error);
+   if(id!==generation.current)return;setResult(value);setBook(value.book);setSource(value.evidenceSource||'Agent OS request · Binance verified');setFeedError('');setNow(Date.now());return value;
   }catch(e){if(id===generation.current)setError(e instanceof Error?e.message:'Agent OS check failed.');}
   finally{if(id===generation.current)setBusy(false);}
  }
@@ -73,11 +73,11 @@ export default function Home(){
  const headline=busy?'Reading the order book…':error?'Check unavailable':result?(validResult?(result.passed?'Within the checked limits.':'Your plan needs a revision.'):'This review has expired.'):'Ready when you are.';
  return <main className="app-shell">
  <div className="cosmic-backdrop" aria-hidden="true"/>
- <header className="topbar"><a className="brand" href="#workspace" aria-label="TradeGuard home"><img className="brand-logo" src="/tradeguard-mark.svg" alt=""/><span>TRADEGUARD</span></a><nav className="nav-links" aria-label="Main navigation"><a className="active" href="#workspace">Workspace</a><a href="#guardrails">Guardrails</a><a href="#activity">Evidence</a></nav><div className="mode-pill"><span/>{source==='Binance Agent OS MCP'?'Agent OS evidence':agentToolReady?'Agent OS bridge ready':fresh?'Live Binance feed':feedError?'Feed unavailable':'Refreshing feed'}</div></header>
+ <header className="topbar"><a className="brand" href="#workspace" aria-label="TradeGuard home"><img className="brand-logo" src="/tradeguard-mark.svg" alt=""/><span>TRADEGUARD</span></a><nav className="nav-links" aria-label="Main navigation"><a className="active" href="#workspace">Workspace</a><a href="#guardrails">Guardrails</a><a href="#activity">Evidence</a></nav><div className="mode-pill"><span/>{source==='Agent OS request · Binance verified'?'Agent OS · verified':agentToolReady?'Agent OS bridge ready':fresh?'Live Binance feed':feedError?'Feed unavailable':'Refreshing feed'}</div></header>
  <section className="intro"><div className="intro-art" aria-hidden="true"><img src="/human-machine.png" alt=""/><span className="connection-glow"/></div><div className="intro-copy"><p className="eyebrow">TRADEGUARD / PRE-TRADE CHECKS</p><h1>Your intent.<br/><em>Under control.</em></h1><p>Check a trading plan before it becomes a trade.</p></div><div className="intro-note"><ShieldCheck size={18}/><span>Live market evidence.<br/>Your limits, enforced.</span></div></section>
  <section className="workspace" id="workspace" aria-label="Live trading plan checks">
  <div className="plan-panel glass-panel"><div className="panel-heading"><div><p className="panel-index">01 / PLAN</p><h2>Check a BTC buy</h2></div><span className="data-pill">Agent OS bridge active</span></div>
- <div className="agent-os-bridge"><div className="agent-os-icon"><Bot size={19}/></div><div><strong>{source==='Binance Agent OS MCP'?'Agent OS evidence received':agentToolReady?'Agent OS bridge is ready':'Agent OS workflow available'}</strong><p>Let the agent fetch the order book through Binance MCP, then hand it to TradeGuard for a constrained, visible review.</p></div><Button variant="outline" onClick={()=>void copyAgentPrompt()}><Copy size={15}/>{copied?'Copied':'Copy agent prompt'}</Button></div>
+ <div className="agent-os-bridge"><div className="agent-os-icon"><Bot size={19}/></div><div><strong>{source==='Agent OS request · Binance verified'?'Agent snapshot verified':agentToolReady?'Agent OS bridge is ready':'Agent OS workflow available'}</strong><p>Let the agent fetch the order book through Binance MCP. TradeGuard cross-checks it against Binance before calculating risk.</p></div><Button variant="outline" onClick={()=>void copyAgentPrompt()}><Copy size={15}/>{copied?'Copied':'Copy agent prompt'}</Button></div>
  <div className="market-tape" aria-live="polite"><div><span>Best ask / USDT</span><strong>{book?money(book.asks[0][0]):'—'}</strong></div><div><span>Best bid / USDT</span><strong>{book?money(book.bid):'—'}</strong></div><div><span>Spread</span><strong>{book?((book.asks[0][0]/book.bid-1)*100).toFixed(4)+'%':'—'}</strong></div></div>
  <p className="feed-note">{book?'Snapshot received '+new Date(book.receivedAt).toLocaleTimeString()+' · '+Math.max(0,Math.floor((now-book.receivedAt)/1000))+'s ago':'Connecting to Binance Spot…'} <button onClick={()=>void refresh()} aria-label="Refresh market data"><RefreshCw size={14}/></button></p>
  {feedError&&<p className="error-note" role="alert">{feedError}</p>}

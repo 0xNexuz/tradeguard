@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {review,validatePlan} from '../lib/risk.ts';
+import {review,validatePlan,verifyAgentMarket} from '../lib/risk.ts';
 const now=Date.now();
 const book={bid:99,asks:[[100,1],[101,10]],receivedAt:now,updateId:1};
 const base={amount:100,budget:1000,portfolio:1000,holding:0,exposure:50,slippage:0.5};
@@ -17,4 +17,7 @@ assert.equal(review({...base,amount:5000,budget:10000,portfolio:100000},book,now
 const revised=review({...base,amount:600},book,now).candidate;
 assert.equal(review({...base,amount:revised},book,now).passed,true);
 assert.throws(()=>validatePlan({amount:100}));
-console.log('12 risk checks passed: budgets, exposure, depth, price impact, missing values, invalid and stale data, revision.');
+assert.doesNotThrow(()=>verifyAgentMarket(book,{...book,bid:99.1,asks:[[100.1,1]],updateId:2}));
+assert.throws(()=>verifyAgentMarket({...book,bid:50},{...book,updateId:2}));
+assert.throws(()=>verifyAgentMarket({...book,updateId:-1},{...book,updateId:2}));
+console.log('15 risk checks passed: policy limits, invalid and stale data, revisions, and Agent OS market verification.');

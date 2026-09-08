@@ -1,4 +1,5 @@
-import { review, validatePlan, type Book, type Plan } from '../lib/risk.js';
+import { getBook } from '../lib/market.js';
+import { review, validatePlan, verifyAgentMarket, type Book, type Plan } from '../lib/risk.js';
 
 type Reply = {
   status(code: number): Reply;
@@ -11,7 +12,7 @@ type Payload = {
   book: Omit<Book, 'receivedAt'>;
 };
 
-export default function handler(
+export default async function handler(
   request: { method?: string; body?: unknown },
   response: Reply,
 ) {
@@ -25,10 +26,15 @@ export default function handler(
       : request.body) as Payload;
     if (payload.source !== 'binance-agent-os-mcp') throw new Error();
     validatePlan(payload.plan);
-    const book: Book = { ...payload.book, receivedAt: Date.now() };
+    const receivedAt = Date.now();
+    const agentBook: Book = { ...payload.book, receivedAt };
+    review(payload.plan, agentBook, receivedAt);
+    const book = await getBook();
+    const comparison = verifyAgentMarket(agentBook, book);
     return response.status(200).json({
       ...review(payload.plan, book),
-      evidenceSource: 'Binance Agent OS MCP',
+      evidenceSource: 'Agent OS request · Binance verified',
+      agentEvidence: { updateId: agentBook.updateId, ...comparison },
       execution: 'No order placed',
     });
   } catch {
