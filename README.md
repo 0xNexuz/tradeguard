@@ -25,10 +25,10 @@ Use 1080p landscape, readable captions, quiet music, and a continuous take betwe
 npm install
 npm run dev
 ## Verify
-node --experimental-strip-types tests/risk.test.mjs
-npx tsc --noEmit
-npm run build
-Use Node 24 or another Node version supporting TypeScript type stripping for the risk assertions.
+npm run verify
+npm audit --audit-level=high
+
+The verification suite runs 15 deterministic policy checks, three Agent OS endpoint checks, TypeScript checking and the production build. Use Node 24 or another Node version supporting TypeScript type stripping.
 ## Flow
 GET /api/market retrieves a 100-level public order book. POST /api/review validates six numeric inputs, retrieves a fresh book and checks budget, manual portfolio exposure, visible depth and average price impact. Revised amounts require another request. The UI polls every 15 seconds and exports JSON evidence.
 

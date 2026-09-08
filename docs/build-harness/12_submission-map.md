@@ -7,7 +7,7 @@ TradeGuard is an explainable pre-trade safety gate for AI-assisted BTCUSDT workf
 ## Links
 
 - Live public demo: https://tradeguard-os.vercel.app
-- GitHub: https://github.com/0xNexuz/tradeguard — currently private.
+- GitHub: https://github.com/0xNexuz/tradeguard — publish before submission and confirm anonymous access.
 - Secondary Sites deployment: https://tradeguard-agent-os.elllbest7.chatgpt.site — access-controlled.
 
 ## Requirement Matrix
@@ -16,8 +16,8 @@ TradeGuard is an explainable pre-trade safety gate for AI-assisted BTCUSDT workf
 |---|---|---|
 | Working public deployment | **COMPLETE** | Recheck immediately before submission. |
 | Real Binance market input | **COMPLETE** | Preserve the MCP and endpoint evidence. |
-| Agent OS connection | **PARTIAL** | Record a supported-browser WebMCP invocation and harden provenance. |
-| Source access for judges | **BLOCKED** | Make the repo public or grant confirmed judge access. |
+| Agent OS connection | **PARTIAL** | Server-side market integrity is verified; record a supported-browser WebMCP invocation. |
+| Source access for judges | **IN PROGRESS** | Publish the repository and confirm anonymous access. |
 | Demo video | **UNVERIFIED** | Record from the approved script after P0 fixes. |
 | Social post | **UNVERIFIED** | Publish only after links and claims are final. |
 | Survey/form submission | **UNVERIFIED** | Complete before the official deadline. |
@@ -34,7 +34,6 @@ TradeGuard is an explainable pre-trade safety gate for AI-assisted BTCUSDT workf
 
 ## Release Decision
 
-Status: **PARTIAL / NOT SUBMISSION-READY**.
+Status: **PARTIAL / ENGINEERING-READY**.
 
-Resolve the P0 items in `00_README.md`, verify the official rules, capture the end-to-end browser evidence, and confirm judge access before submitting.
-
+Confirm judge access, capture the end-to-end browser evidence, and complete the account-bound submission actions before the deadline.

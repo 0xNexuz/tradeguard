@@ -12,7 +12,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: node --experimental-strip-types tests/risk.test.mjs
-      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run typecheck
       - run: npm run build
       - run: npm audit --audit-level=high

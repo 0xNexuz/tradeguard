@@ -2,16 +2,16 @@
 
 This directory is the readiness source of truth for the Binance Agent OS Mini Hackathon build.
 
-**Latest status:** See [September 8 release update](13_release-update.md). The findings below describe the September 6 audit and are retained as history.
+**Latest status:** September 8 final engineering audit. Earlier findings remain in the numbered documents as historical evidence where labeled.
 
 ## Current Readiness
 
 - Overall status: **PARTIAL**
-- Conservative readiness score: **67/100**. This is an engineering-readiness estimate, not a win probability.
-- P0 blockers: Agent OS snapshot provenance can be spoofed at the HTTP boundary; WebMCP tool execution has not been verified in a supported browser context; dependency audit reports eight high-severity advisories; the GitHub repository is private; demo, social post, survey and eligibility remain unverified.
-- P1 issues: no automated API-route integration suite, no CI, duplicated Sites/Vercel adapters, no signed receipt format.
-- Last verified: 2026-09-06
-- Verified by: Codex using product commit `d424f65`, production HTTP checks and Binance MCP output.
+- Conservative readiness score: **88/100**. The scale ends at 100; this is a submission-readiness estimate, not a win probability.
+- Engineering status: deterministic maximum sizing, server-authoritative Binance verification, explicit no-execution receipts, 15 policy checks, three endpoint checks, typecheck, production build, dependency audit and CI are implemented.
+- Remaining submission actions: capture one supported-browser Agent OS/WebMCP invocation, record the demo, publish the required social post, submit the official form, and confirm entrant eligibility.
+- Last verified: 2026-09-08
+- Verified by: Codex using local release checks, GitHub Actions and production HTTP evidence.
 
 ## Evidence Principle
 

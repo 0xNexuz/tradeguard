@@ -10,16 +10,34 @@ type AgentReviewRequest = {
 };
 
 export async function POST(request: Request) {
+  let payload: AgentReviewRequest;
+  let agentBook: Book;
   try {
     const raw = await request.text();
     if (raw.length > 65536) throw new Error('Payload too large.');
-    const payload = JSON.parse(raw) as AgentReviewRequest;
+    payload = JSON.parse(raw) as AgentReviewRequest;
     if (payload.source !== 'binance-agent-os-mcp') throw new Error('Invalid source.');
     validatePlan(payload.plan);
     const receivedAt = Date.now();
-    const agentBook: Book = { ...payload.book, receivedAt };
+    agentBook = { ...payload.book, receivedAt };
     review(payload.plan, agentBook, receivedAt);
-    const book = await getBook();
+  } catch {
+    return Response.json(
+      { error: 'Invalid Agent OS snapshot. The check was blocked.' },
+      { status: 400 },
+    );
+  }
+  let book: Book;
+  try {
+    book = await getBook();
+    review(payload.plan, book);
+  } catch {
+    return Response.json(
+      { error: 'Binance verification is unavailable. No review was produced.' },
+      { status: 503, headers: { 'Cache-Control': 'no-store' } },
+    );
+  }
+  try {
     const comparison = verifyAgentMarket(agentBook, book);
     const result = review(payload.plan, book);
     return Response.json(
@@ -28,8 +46,8 @@ export async function POST(request: Request) {
     );
   } catch {
     return Response.json(
-      { error: 'Invalid Agent OS snapshot. The check was blocked.' },
-      { status: 400 },
+      { error: 'Agent OS snapshot does not match the current Binance market.' },
+      { status: 400, headers: { 'Cache-Control': 'no-store' } },
     );
   }
 }
